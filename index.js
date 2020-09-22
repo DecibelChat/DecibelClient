@@ -1,5 +1,5 @@
 (function() {
-    "use strict";
+    'use strict';
 
     const MESSAGE_TYPE = {
         SDP: 'SDP',
@@ -18,16 +18,17 @@
 
     const startChat = async() => {
         try {
-            userMediaStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+            userMediaStream =
+                await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
             showChatRoom();
 
-            signaling = new WebSocket('ws://127.0.0.1:1337');
+            signaling = new WebSocket('wss://sf.davidmorra.com:16666');
             peerConnection = createPeerConnection();
 
             addMessageHandler();
 
-            userMediaStream.getTracks()
-                .forEach(track => senders.push(peerConnection.addTrack(track, userMediaStream)));
+            userMediaStream.getTracks().forEach(
+                track => senders.push(peerConnection.addTrack(track, userMediaStream)));
             document.getElementById('self-view').srcObject = userMediaStream;
 
         } catch (err) {
@@ -88,62 +89,66 @@
         return pc;
     };
 
-    const addMessageHandler = () => {
-        signaling.onmessage = async(message) => {
-            const data = JSON.parse(message.data);
+    const addMessageHandler =
+        () => {
+            signaling.onmessage = async(message) => {
+                const data = JSON.parse(message.data);
 
-            if (!data) {
-                return;
-            }
-
-            const { message_type, content } = data;
-            try {
-                if (message_type === MESSAGE_TYPE.CANDIDATE && content) {
-                    await peerConnection.addIceCandidate(content);
-                } else if (message_type === MESSAGE_TYPE.SDP) {
-                    if (content.type === 'offer') {
-                        await peerConnection.setRemoteDescription(content);
-                        const answer = await peerConnection.createAnswer();
-                        await peerConnection.setLocalDescription(answer);
-                        sendMessage({
-                            message_type: MESSAGE_TYPE.SDP,
-                            content: answer,
-                        });
-                    } else if (content.type === 'answer') {
-                        await peerConnection.setRemoteDescription(content);
-                    } else {
-                        console.log('Unsupported SDP type.');
-                    }
+                if (!data) {
+                    return;
                 }
-            } catch (err) {
-                console.error(err);
+
+                const { message_type, content } = data;
+                try {
+                    if (message_type === MESSAGE_TYPE.CANDIDATE && content) {
+                        await peerConnection.addIceCandidate(content);
+                    } else if (message_type === MESSAGE_TYPE.SDP) {
+                        if (content.type === 'offer') {
+                            await peerConnection.setRemoteDescription(content);
+                            const answer = await peerConnection.createAnswer();
+                            await peerConnection.setLocalDescription(answer);
+                            sendMessage({
+                                message_type: MESSAGE_TYPE.SDP,
+                                content: answer,
+                            });
+                        } else if (content.type === 'answer') {
+                            await peerConnection.setRemoteDescription(content);
+                        } else {
+                            console.log('Unsupported SDP type.');
+                        }
+                    }
+                } catch (err) {
+                    console.error(err);
+                }
             }
         }
-    }
 
-    const sendMessage = (message) => {
-        if (code) {
-            signaling.send(JSON.stringify({
-                ...message,
-                code,
-            }));
+    const sendMessage =
+        (message) => {
+            if (code) {
+                signaling.send(JSON.stringify({
+                    ...message,
+                    code,
+                }));
+            }
         }
-    }
 
-    const createAndSendOffer = async() => {
-        const offer = await peerConnection.createOffer();
-        await peerConnection.setLocalDescription(offer);
+    const createAndSendOffer =
+        async() => {
+            const offer = await peerConnection.createOffer();
+            await peerConnection.setLocalDescription(offer);
 
-        sendMessage({
-            message_type: MESSAGE_TYPE.SDP,
-            content: offer,
-        });
-    }
+            sendMessage({
+                message_type: MESSAGE_TYPE.SDP,
+                content: offer,
+            });
+        }
 
-    const showChatRoom = () => {
-        document.getElementById('start').style.display = 'none';
-        document.getElementById('chat-room').style.display = 'grid';
-    }
+    const showChatRoom =
+        () => {
+            document.getElementById('start').style.display = 'none';
+            document.getElementById('chat-room').style.display = 'grid';
+        }
 
     const shareFile = () => {
         if (file) {
@@ -165,10 +170,11 @@
         }
     };
 
-    const closeDialog = () => {
-        document.getElementById('select-file-input').value = '';
-        document.getElementById('select-file-dialog').style.display = 'none';
-    }
+    const closeDialog =
+        () => {
+            document.getElementById('select-file-input').value = '';
+            document.getElementById('select-file-dialog').style.display = 'none';
+        }
 
     const downloadFile = (blob, fileName) => {
         const a = document.createElement('a');
@@ -180,16 +186,17 @@
         a.remove()
     };
 
-    document.getElementById('code-input').addEventListener('input', async(event) => {
-        const { value } = event.target;
-        if (value.length > 8) {
-            document.getElementById('start-button').disabled = false;
-            code = value;
-        } else {
-            document.getElementById('start-button').disabled = true;
-            code = null;
-        }
-    });
+    document.getElementById('code-input')
+        .addEventListener('input', async(event) => {
+            const { value } = event.target;
+            if (value.length > 8) {
+                document.getElementById('start-button').disabled = false;
+                code = value;
+            } else {
+                document.getElementById('start-button').disabled = true;
+                code = null;
+            }
+        });
 
     document.getElementById('start-button').addEventListener('click', async() => {
         if (code) {
@@ -201,23 +208,26 @@
         if (!displayMediaStream) {
             displayMediaStream = await navigator.mediaDevices.getDisplayMedia();
         }
-        senders.find(sender => sender.track.kind === 'video').replaceTrack(displayMediaStream.getTracks()[0]);
+        senders.find(sender => sender.track.kind === 'video')
+            .replaceTrack(displayMediaStream.getTracks()[0]);
 
-        //show what you are showing in your "self-view" video.
+        // show what you are showing in your "self-view" video.
         document.getElementById('self-view').srcObject = displayMediaStream;
 
-        //hide the share button and display the "stop-sharing" one
+        // hide the share button and display the "stop-sharing" one
         document.getElementById('share-button').style.display = 'none';
         document.getElementById('stop-share-button').style.display = 'inline';
     });
 
-    document.getElementById('stop-share-button').addEventListener('click', async() => {
-        senders.find(sender => sender.track.kind === 'video')
-            .replaceTrack(userMediaStream.getTracks().find(track => track.kind === 'video'));
-        document.getElementById('self-view').srcObject = userMediaStream;
-        document.getElementById('share-button').style.display = 'inline';
-        document.getElementById('stop-share-button').style.display = 'none';
-    });
+    document.getElementById('stop-share-button')
+        .addEventListener('click', async() => {
+            senders.find(sender => sender.track.kind === 'video')
+                .replaceTrack(userMediaStream.getTracks().find(
+                    track => track.kind === 'video'));
+            document.getElementById('self-view').srcObject = userMediaStream;
+            document.getElementById('share-button').style.display = 'inline';
+            document.getElementById('stop-share-button').style.display = 'none';
+        });
 
     document.getElementById('share-file-button').addEventListener('click', () => {
         document.getElementById('select-file-dialog').style.display = 'block';
@@ -227,10 +237,11 @@
         closeDialog();
     });
 
-    document.getElementById('select-file-input').addEventListener('change', (event) => {
-        file = event.target.files[0];
-        document.getElementById('ok-button').disabled = !file;
-    });
+    document.getElementById('select-file-input')
+        .addEventListener('change', (event) => {
+            file = event.target.files[0];
+            document.getElementById('ok-button').disabled = !file;
+        });
 
     document.getElementById('ok-button').addEventListener('click', () => {
         shareFile();
