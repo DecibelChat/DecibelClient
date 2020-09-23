@@ -20,10 +20,6 @@
     const startChat = async() => {
         try {
             showChatRoom();
-            userMediaStream =
-                await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
-            userMediaStreamVideoOnly =
-                await navigator.mediaDevices.getUserMedia({ video: true });
 
 
             signaling = new WebSocket('wss://sf.davidmorra.com:16666');
@@ -31,14 +27,40 @@
 
             addMessageHandler();
 
-            userMediaStream.getTracks().forEach(
-                track => senders.push(peerConnection.addTrack(track, userMediaStream)));
-            document.getElementById('self-view').srcObject = userMediaStreamVideoOnly;
+            navigator.mediaDevices.getUserMedia({ audio: true, video: true })
+                .then(function(stream) {
+                    userMediaStream = stream;
+                    userMediaStream.getTracks().forEach(
+                        track => senders.push(
+                            peerConnection.addTrack(track, userMediaStream)));
+                    document.getElementById('self-view').srcObject =
+                        userMediaStreamVideoOnly;
+                })
+                .catch(function(err) {});
+
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(function(stream) {
+                    userMediaStreamVideoOnly = stream;
+                })
+                .catch(function(err) {});
 
         } catch (err) {
             console.error(err);
         }
     };
+
+    const endChat = async() => {
+        code = null;
+        peerConnection = null;
+        signaling = null;
+        senders.length = 0;
+        userMediaStream = null;
+        userMediaStreamVideoOnly = null;
+        displayMediaStream = null;
+        file = null;
+        showLandingPage();
+    };
+
 
     const createPeerConnection = () => {
         const pc = new RTCPeerConnection({
@@ -187,6 +209,11 @@
             document.getElementById('chat-room').style.display = 'grid';
         }
 
+    const showLandingPage = () => {
+        document.getElementById('start').style.display = 'grid';
+        document.getElementById('chat-room').style.display = 'none';
+    }
+
     const shareFile = () => {
         if (file) {
             const channelLabel = file.name;
@@ -226,7 +253,7 @@
     document.getElementById('code-input')
         .addEventListener('input', async(event) => {
             const { value } = event.target;
-            if (value.length > 8) {
+            if (value.length > 0) {
                 document.getElementById('start-button').disabled = false;
                 code = value;
             } else {
@@ -238,6 +265,13 @@
     document.getElementById('start-button').addEventListener('click', async() => {
         if (code) {
             startChat();
+            document.getElementById('code-input').value = null;
+        }
+    });
+
+    document.getElementById('end-button').addEventListener('click', async() => {
+        if (code) {
+            endChat();
         }
     });
 

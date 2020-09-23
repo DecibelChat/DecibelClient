@@ -5,19 +5,16 @@ body {
 }
 
 body {
-    background-color: #01284a;
-    padding: 8px;
+    background-color: #013d4aed;
+    padding: 20vh;
 }
 
 #start {
-    position: relative;
-    top: 40%;
-    width: 100%;
     text-align: center;
 }
 
 #code-input {
-    border-radius: 3px;
+    border-radius: 30px;
     margin-bottom: 20px;
     padding: 5px;
     font-size: 16px;
@@ -41,7 +38,7 @@ button {
 }
 
 #start-button:not(:disabled) {
-    background-color: #000f1c;
+    background-color: #0098ff;
 }
 
 #start-button:disabled {
@@ -63,19 +60,27 @@ video {
 #remote-view-container {
     position: relative;
     grid-column: 2;
-    background-color: black;
+    background-color: #00000040;
     height: 95vh;
 }
 
 #self-view {
     grid-column: 1;
-    background-color: black;
+    background-color: #00000040;
+    margin-bottom: 20px;
 }
 
 #remote-view {
     position: absolute;
     height: 100%;
     width: 100%;
+}
+
+#end-button {
+    grid-column: 0;
+    background-color: #ff4646;
+    color: white;
+    position: relative;
 }
 
 #view-buttons {
