@@ -33,14 +33,14 @@
                     userMediaStream.getTracks().forEach(
                         track => senders.push(
                             peerConnection.addTrack(track, userMediaStream)));
-                    document.getElementById('self-view').srcObject =
-                        userMediaStreamVideoOnly;
                 })
                 .catch(function(err) {});
 
             navigator.mediaDevices.getUserMedia({ video: true })
                 .then(function(stream) {
                     userMediaStreamVideoOnly = stream;
+                    document.getElementById('self-view').srcObject =
+                        userMediaStreamVideoOnly;
                 })
                 .catch(function(err) {});
 
