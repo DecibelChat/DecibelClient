@@ -53,7 +53,7 @@
         code = null;
         peerConnection = null;
 
-        signaling.close(1001, "Client ended the session.");
+        signaling.close(1000, "Client ended the session.");
         signaling = null;
 
         senders.length = 0;
