@@ -52,20 +52,30 @@
     const endChat = async() => {
         code = null;
         peerConnection = null;
+
+        signaling.close(1001, "Client ended the session.");
         signaling = null;
+
         senders.length = 0;
 
-        userMediaStream.getTracks().forEach(
-            track => { track.stop(); });
+        if (displayMediaStream) {
+            userMediaStream.getTracks().forEach(
+                track => { track.stop(); });
+        }
         userMediaStream = null;
 
-        userMediaStreamVideoOnly.getTracks().forEach(
-            track => { track.stop(); });
-        userMediaStreamVideoOnly = null;
+        if (displayMediaStream) {
+            userMediaStreamVideoOnly.getTracks().forEach(
+                track => { track.stop(); });
+        }
 
-        displayMediaStream.getTracks().forEach(
-            track => { track.stop(); });
+        userMediaStreamVideoOnly = null;
+        if (displayMediaStream) {
+            displayMediaStream.getTracks().forEach(
+                track => { track.stop(); });
+        }
         displayMediaStream = null;
+
         file = null;
         showLandingPage();
     };
