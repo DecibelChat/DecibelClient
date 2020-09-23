@@ -13,6 +13,7 @@
     let signaling;
     const senders = [];
     let userMediaStream;
+    let userMediaStreamVideoOnly;
     let displayMediaStream;
     let file;
 
@@ -21,6 +22,8 @@
             showChatRoom();
             userMediaStream =
                 await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+            userMediaStreamVideoOnly =
+                await navigator.mediaDevices.getUserMedia({ video: true });
 
 
             signaling = new WebSocket('wss://sf.davidmorra.com:16666');
@@ -30,7 +33,7 @@
 
             userMediaStream.getTracks().forEach(
                 track => senders.push(peerConnection.addTrack(track, userMediaStream)));
-            document.getElementById('self-view').srcObject = userMediaStream;
+            document.getElementById('self-view').srcObject = userMediaStreamVideoOnly;
 
         } catch (err) {
             console.error(err);
@@ -258,7 +261,7 @@
             senders.find(sender => sender.track.kind === 'video')
                 .replaceTrack(userMediaStream.getTracks().find(
                     track => track.kind === 'video'));
-            document.getElementById('self-view').srcObject = userMediaStream;
+            document.getElementById('self-view').srcObject = userMediaStreamVideoOnly;
             document.getElementById('share-button').style.display = 'inline';
             document.getElementById('stop-share-button').style.display = 'none';
         });
