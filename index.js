@@ -54,8 +54,17 @@
         peerConnection = null;
         signaling = null;
         senders.length = 0;
+
+        userMediaStream.getTracks().forEach(
+            track => { track.stop(); });
         userMediaStream = null;
+
+        userMediaStreamVideoOnly.getTracks().forEach(
+            track => { track.stop(); });
         userMediaStreamVideoOnly = null;
+
+        displayMediaStream.getTracks().forEach(
+            track => { track.stop(); });
         displayMediaStream = null;
         file = null;
         showLandingPage();
