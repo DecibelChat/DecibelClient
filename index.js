@@ -148,7 +148,12 @@
             if (signaling.readyState !== signaling.OPEN) {
                 try {
                     await waitForOpenConnection(signaling)
-                    signaling.send(msg)
+                    if (code) {
+                        signaling.send(JSON.stringify({
+                            ...message,
+                            code,
+                        }));
+                    }
                 } catch (err) {
                     console.error(err)
                 }
