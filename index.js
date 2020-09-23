@@ -28,21 +28,25 @@
             addMessageHandler();
 
             navigator.mediaDevices.getUserMedia({ audio: true, video: true })
-                .then(function(stream) {
+                .then((stream) => {
                     userMediaStream = stream;
                     userMediaStream.getTracks().forEach(
                         track => senders.push(
                             peerConnection.addTrack(track, userMediaStream)));
                 })
-                .catch(function(err) {});
+                .catch((err) => { userMediaStream = new MediaStream() });
 
             navigator.mediaDevices.getUserMedia({ video: true })
-                .then(function(stream) {
+                .then((stream) => {
                     userMediaStreamVideoOnly = stream;
                     document.getElementById('self-view').srcObject =
                         userMediaStreamVideoOnly;
                 })
-                .catch(function(err) {});
+                .catch((err) => {
+                    userMediaStreamVideoOnly = new MediaStream();
+                    document.getElementById('self-view').srcObject =
+                        userMediaStreamVideoOnly;
+                });
 
         } catch (err) {
             console.error(err);
@@ -53,26 +57,29 @@
         code = null;
         peerConnection = null;
 
-        signaling.close(1000, "Client ended the session.");
+        signaling.close(1000, 'Client ended the session.');
         signaling = null;
 
         senders.length = 0;
 
-        if (displayMediaStream) {
-            userMediaStream.getTracks().forEach(
-                track => { track.stop(); });
+        if (userMediaStream) {
+            userMediaStream.getTracks().forEach(track => {
+                track.stop();
+            });
         }
         userMediaStream = null;
 
-        if (displayMediaStream) {
-            userMediaStreamVideoOnly.getTracks().forEach(
-                track => { track.stop(); });
+        if (userMediaStreamVideoOnly) {
+            userMediaStreamVideoOnly.getTracks().forEach(track => {
+                track.stop();
+            });
         }
-
         userMediaStreamVideoOnly = null;
+
         if (displayMediaStream) {
-            displayMediaStream.getTracks().forEach(
-                track => { track.stop(); });
+            displayMediaStream.getTracks().forEach(track => {
+                track.stop();
+            });
         }
         displayMediaStream = null;
 
@@ -228,10 +235,11 @@
             document.getElementById('chat-room').style.display = 'grid';
         }
 
-    const showLandingPage = () => {
-        document.getElementById('start').style.display = 'grid';
-        document.getElementById('chat-room').style.display = 'none';
-    }
+    const showLandingPage =
+        () => {
+            document.getElementById('start').style.display = 'grid';
+            document.getElementById('chat-room').style.display = 'none';
+        }
 
     const shareFile = () => {
         if (file) {
