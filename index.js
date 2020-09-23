@@ -18,9 +18,10 @@
 
     const startChat = async() => {
         try {
+            showChatRoom();
             userMediaStream =
                 await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
-            showChatRoom();
+
 
             signaling = new WebSocket('wss://sf.davidmorra.com:16666');
             peerConnection = createPeerConnection();
@@ -122,14 +123,42 @@
                 }
             }
         }
+    const waitForOpenConnection =
+        (socket) => {
+            return new Promise((resolve, reject) => {
+                const maxNumberOfAttempts = 10
+                const intervalTime = 200 // ms
+
+                let currentAttempt = 0
+                const interval = setInterval(() => {
+                    if (currentAttempt > maxNumberOfAttempts - 1) {
+                        clearInterval(interval)
+                        reject(new Error('Maximum number of attempts exceeded'))
+                    } else if (socket.readyState === socket.OPEN) {
+                        clearInterval(interval)
+                        resolve()
+                    }
+                    currentAttempt++
+                }, intervalTime)
+            })
+        }
 
     const sendMessage =
-        (message) => {
-            if (code) {
-                signaling.send(JSON.stringify({
-                    ...message,
-                    code,
-                }));
+        async(message) => {
+            if (signaling.readyState !== signaling.OPEN) {
+                try {
+                    await waitForOpenConnection(signaling)
+                    signaling.send(msg)
+                } catch (err) {
+                    console.error(err)
+                }
+            } else {
+                if (code) {
+                    signaling.send(JSON.stringify({
+                        ...message,
+                        code,
+                    }));
+                }
             }
         }
 
