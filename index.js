@@ -48,6 +48,10 @@
                         userMediaStreamVideoOnly;
                 });
 
+            // open client connection even if no media capture devices found.
+            // allows consumer only participants
+            createAndSendOffer();
+
         } catch (err) {
             console.error(err);
         }
