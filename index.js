@@ -306,6 +306,37 @@
         }
     });
 
+    document.getElementById('mic-mute-button')
+        .addEventListener('click', async() => {
+            let button = document.getElementById('mic-mute-button');
+            let icon = button.children[0];
+            let current_value = icon.classList.value;
+
+            if (current_value.includes('slash')) {
+                icon.classList.toggle('fa-microphone');
+
+                button.style.backgroundColor = ""
+            } else {
+                icon.classList.toggle('fa-microphone-slash');
+                button.style.backgroundColor = "#97a2ab"
+            }
+        });
+
+    document.getElementById('camera-mute-button')
+        .addEventListener('click', async() => {
+            let button = document.getElementById('camera-mute-button');
+            let icon = button.children[0];
+            let current_value = icon.classList.value;
+
+            if (current_value.includes('slash')) {
+                icon.classList.toggle('fa-video');
+                button.style.backgroundColor = ""
+            } else {
+                icon.classList.toggle('fa-video-slash');
+                button.style.backgroundColor = "#97a2ab"
+            }
+        });
+
     document.getElementById('share-button').addEventListener('click', async() => {
         if (!displayMediaStream) {
             displayMediaStream = await navigator.mediaDevices.getDisplayMedia();
