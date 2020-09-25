@@ -63,17 +63,35 @@
                         console.log(userDevices);
 
                         let selector;
+                        let default_option_string;
                         if (kind == 'audioinput') {
                             selector = document.getElementById('audio-source-menu');
+                            default_option_string = "Default Audio Input";
                         } else if (kind == 'videoinput') {
                             selector = document.getElementById('video-source-menu');
+                            default_option_string = "Default Video Input";
                         }
 
                         let option = document.createElement("option");
-                        option.text = device.label;
+                        option.text = device.label.length ? device.label : default_option_string;
                         selector.options.add(option);
                     })
-                });
+                }).finally(() => {
+                let audio_selector = selector = document.getElementById('audio-source-menu');
+                if (audio_selector.options.length() === 0) {
+
+                    let option = document.createElement("option");
+                    option.text = "No audio inputs found.";
+                    audio_selector.options.add(option);
+                }
+                let video_selector = selector = document.getElementById('video-source-menu');
+                if (video_selector.options.length() === 0) {
+
+                    let option = document.createElement("option");
+                    option.text = "No video inputs found.";
+                    video_selector.options.add(option);
+                }
+            });
 
             // open client connection even if no media capture devices found.
             // allows consumer only participants
