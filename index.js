@@ -12,8 +12,9 @@
     let peerConnection;
     let signaling;
     const senders = [];
-    let userMediaStream;
-    let userMediaStreamVideoOnly;
+    let userDevices = {};
+    let userAudioStream;
+    let userVideoStream;
     let displayMediaStream;
     let file;
 
@@ -21,31 +22,57 @@
         try {
             showChatRoom();
 
-
             signaling = new WebSocket('wss://sf.davidmorra.com:16666');
             peerConnection = createPeerConnection();
 
             addMessageHandler();
 
-            navigator.mediaDevices.getUserMedia({ audio: true, video: true })
+            // make sure camera/microphone permissions are resolved before anything
+            // else.
+            await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+
+            navigator.mediaDevices.getUserMedia({ audio: true })
                 .then((stream) => {
-                    userMediaStream = stream;
-                    userMediaStream.getTracks().forEach(
+                    userAudioStream = stream;
+                    userAudioStream.getTracks().forEach(
                         track => senders.push(
-                            peerConnection.addTrack(track, userMediaStream)));
+                            peerConnection.addTrack(track, userAudioStream)));
                 })
-                .catch((err) => { userMediaStream = new MediaStream() });
+                .catch((err) => { userAudioStream = new MediaStream() });
 
             navigator.mediaDevices.getUserMedia({ video: true })
                 .then((stream) => {
-                    userMediaStreamVideoOnly = stream;
-                    document.getElementById('self-view').srcObject =
-                        userMediaStreamVideoOnly;
+                    userVideoStream = stream;
                 })
                 .catch((err) => {
-                    userMediaStreamVideoOnly = new MediaStream();
-                    document.getElementById('self-view').srcObject =
-                        userMediaStreamVideoOnly;
+                    userVideoStream = new MediaStream();
+                })
+                .finally(() => {
+                    document.getElementById('self-view').srcObject = userVideoStream;
+                });
+
+            navigator.mediaDevices.enumerateDevices().then(
+                devices => {
+                    devices.forEach(device => {
+                        let kind = device.kind;
+                        if (!(kind in userDevices)) {
+                            userDevices[kind] = [];
+                        }
+
+                        userDevices[kind].push(device);
+                        console.log(userDevices);
+
+                        let selector;
+                        if (kind == 'audioinput') {
+                            selector = document.getElementById('audio-source-menu');
+                        } else if (kind == 'videoinput') {
+                            selector = document.getElementById('video-source-menu');
+                        }
+
+                        let option = document.createElement("option");
+                        option.text = device.label;
+                        selector.options.add(option);
+                    })
                 });
 
             // open client connection even if no media capture devices found.
@@ -59,6 +86,8 @@
 
     const endChat = async() => {
         code = null;
+
+        peerConnection.close();
         peerConnection = null;
 
         signaling.close(1000, 'Client ended the session.');
@@ -66,19 +95,19 @@
 
         senders.length = 0;
 
-        if (userMediaStream) {
-            userMediaStream.getTracks().forEach(track => {
+        if (userAudioStream) {
+            userAudioStream.getTracks().forEach(track => {
                 track.stop();
             });
         }
-        userMediaStream = null;
+        userAudioStream = null;
 
-        if (userMediaStreamVideoOnly) {
-            userMediaStreamVideoOnly.getTracks().forEach(track => {
+        if (userVideoStream) {
+            userVideoStream.getTracks().forEach(track => {
                 track.stop();
             });
         }
-        userMediaStreamVideoOnly = null;
+        userVideoStream = null;
 
         if (displayMediaStream) {
             displayMediaStream.getTracks().forEach(track => {
@@ -313,12 +342,18 @@
             let current_value = icon.classList.value;
 
             if (current_value.includes('slash')) {
-                icon.classList.toggle('fa-microphone');
+                userAudioStream.getTracks().forEach(track => {
+                    track.enabled = true;
+                });
 
-                button.style.backgroundColor = ""
+                icon.classList.toggle('fa-microphone');
+                button.style.backgroundColor = ''
             } else {
+                userAudioStream.getTracks().forEach(track => {
+                    track.enabled = false;
+                });
                 icon.classList.toggle('fa-microphone-slash');
-                button.style.backgroundColor = "#97a2ab"
+                button.style.backgroundColor = '#97a2ab'
             }
         });
 
@@ -329,11 +364,17 @@
             let current_value = icon.classList.value;
 
             if (current_value.includes('slash')) {
+                userVideoStream.getTracks().forEach(track => {
+                    track.enabled = true;
+                });
                 icon.classList.toggle('fa-video');
-                button.style.backgroundColor = ""
+                button.style.backgroundColor = ''
             } else {
+                userVideoStream.getTracks().forEach(track => {
+                    track.enabled = false;
+                });
                 icon.classList.toggle('fa-video-slash');
-                button.style.backgroundColor = "#97a2ab"
+                button.style.backgroundColor = '#97a2ab'
             }
         });
 
@@ -355,9 +396,9 @@
     document.getElementById('stop-share-button')
         .addEventListener('click', async() => {
             senders.find(sender => sender.track.kind === 'video')
-                .replaceTrack(userMediaStream.getTracks().find(
+                .replaceTrack(userVideoStream.getTracks().find(
                     track => track.kind === 'video'));
-            document.getElementById('self-view').srcObject = userMediaStreamVideoOnly;
+            document.getElementById('self-view').srcObject = userVideoStream;
             document.getElementById('share-button').style.display = 'inline';
             document.getElementById('stop-share-button').style.display = 'none';
         });
