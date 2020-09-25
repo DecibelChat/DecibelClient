@@ -29,7 +29,12 @@
 
             // make sure camera/microphone permissions are resolved before anything
             // else.
-            await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+            try {
+
+                await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+            } catch (error) {
+                console.log(error);
+            }
 
             navigator.mediaDevices.getUserMedia({ audio: true })
                 .then((stream) => {
@@ -71,21 +76,22 @@
                             selector = document.getElementById('video-source-menu');
                             default_option_string = "Default Video Input";
                         }
-
-                        let option = document.createElement("option");
-                        option.text = device.label.length ? device.label : default_option_string;
-                        selector.options.add(option);
+                        if (selector) {
+                            let option = document.createElement("option");
+                            option.text = device.label.length ? device.label : default_option_string;
+                            selector.options.add(option);
+                        }
                     })
                 }).finally(() => {
-                let audio_selector = selector = document.getElementById('audio-source-menu');
-                if (audio_selector.options.length() === 0) {
+                let audio_selector = document.getElementById('audio-source-menu');
+                if (audio_selector.options.length === 0) {
 
                     let option = document.createElement("option");
                     option.text = "No audio inputs found.";
                     audio_selector.options.add(option);
                 }
-                let video_selector = selector = document.getElementById('video-source-menu');
-                if (video_selector.options.length() === 0) {
+                let video_selector = document.getElementById('video-source-menu');
+                if (video_selector.options.length === 0) {
 
                     let option = document.createElement("option");
                     option.text = "No video inputs found.";
