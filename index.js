@@ -4,8 +4,26 @@
     const MESSAGE_TYPE = {
         SDP: 'SDP',
         CANDIDATE: 'CANDIDATE',
-        SERVER: 'SERVER'
+        SERVER: 'SERVER',
+        DELETE: 'DELETE'
     }
+
+    class Peer {
+        constructor() {
+            this.video = document.createElement("video");
+            this.video.id = "remote-view-" + Object.keys(peerConnection).length;
+            this.video.autoplay = true;
+
+            let container = document.getElementById("remote-view-container");
+            container.appendChild(this.video);
+
+            this.connection = createPeerConnection(this.video);
+
+            this.connection.ontrack = (event) => {
+                this.video.srcObject = event.streams[0];
+            };
+        }
+    };
 
     const MAXIMUM_MESSAGE_SIZE = 65535;
     const END_OF_FILE_MESSAGE = 'EOF';
@@ -118,7 +136,7 @@
         code = null;
 
         for (let key in peerConnection) {
-            peerConnection[key].close();
+            peerConnection[key].connection.close();
         }
         // peerConnection.close();
         peerConnection = {};
@@ -172,11 +190,6 @@
             }
         };
 
-        pc.ontrack = (event) => {
-            const video = document.getElementById('remote-view');
-            video.srcObject = event.streams[0];
-        };
-
         pc.ondatachannel = (event) => {
             const { channel } = event;
             channel.binaryType = 'arraybuffer';
@@ -213,6 +226,41 @@
         return pc;
     };
 
+    const updateRemoteViewLayout = async() => {
+        let container = document.getElementById('remote-view-container');
+
+        let desired_rows = 1;
+        let desired_columns = 1;
+
+        let num_peers = Object.keys(peerConnection).length;
+        if (num_peers > 1) {
+            desired_columns = 2;
+            desired_rows = Math.ceil(num_peers / desired_columns);
+        }
+
+        let desired_column_str = "repeat(" + desired_columns + ", 1fr)";
+        let desired_row_str = "repeat(" + desired_rows + ", 1fr)";
+
+        let current_columns = container.style.gridTemplateColumns;
+        let current_rows = container.style.gridTemplateRows;
+
+        if (desired_column_str !== current_columns || desired_row_str !== current_rows) {
+            container.style.gridTemplateColumns = desired_column_str;
+            container.style.gridTemplateRows = desired_row_str;
+
+            let ii = 0
+            for (let key in peerConnection) {
+                let row = Math.floor(ii / desired_columns) + 1;
+                let column = ii % desired_columns + 1;
+
+                peerConnection[key].video.style.gridRowStart = row;
+                peerConnection[key].video.style.gridColumnStart = column;
+
+                ii++;
+            }
+        }
+    };
+
     const addMessageHandler = () => {
         signaling.onmessage = async(message) => {
             const data = JSON.parse(message.data);
@@ -224,10 +272,11 @@
             const { message_type, content, peer_id } = data;
             try {
                 if (!(peer_id in peerConnection)) {
-                    peerConnection[peer_id] = createPeerConnection();
+                    peerConnection[peer_id] = new Peer();
+                    updateRemoteViewLayout();
                 }
 
-                let pc = peerConnection[peer_id];
+                let pc = peerConnection[peer_id].connection;
 
                 if (message_type === MESSAGE_TYPE.CANDIDATE && content) {
                     await pc.addIceCandidate(content);
@@ -245,6 +294,12 @@
                     } else {
                         console.log('Unsupported SDP type.');
                     }
+                } else if (message_type === MESSAGE_TYPE.DELETE) {
+                    peerConnection[peer_id].video.remove();
+                    peerConnection[peer_id].connection.close();
+                    delete peerConnection[peer_id];
+
+                    updateRemoteViewLayout();
                 }
             } catch (err) {
                 console.error(err);
