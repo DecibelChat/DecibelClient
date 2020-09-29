@@ -9,7 +9,7 @@
     const MAXIMUM_MESSAGE_SIZE = 65535;
     const END_OF_FILE_MESSAGE = 'EOF';
     let code;
-    let peerConnection;
+    let peerConnection = {};
     let signaling;
     const senders = [];
     let userDevices = {};
@@ -23,14 +23,12 @@
             showChatRoom();
 
             signaling = new WebSocket('wss://sf.davidmorra.com:16666');
-            peerConnection = createPeerConnection();
 
             addMessageHandler();
 
             // make sure camera/microphone permissions are resolved before anything
             // else.
             try {
-
                 await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
             } catch (error) {
                 console.log(error);
@@ -39,9 +37,6 @@
             navigator.mediaDevices.getUserMedia({ audio: true })
                 .then((stream) => {
                     userAudioStream = stream;
-                    userAudioStream.getTracks().forEach(
-                        track => senders.push(
-                            peerConnection.addTrack(track, userAudioStream)));
                 })
                 .catch((err) => { userAudioStream = new MediaStream() });
 
@@ -56,8 +51,8 @@
                     document.getElementById('self-view').srcObject = userVideoStream;
                 });
 
-            navigator.mediaDevices.enumerateDevices().then(
-                devices => {
+            navigator.mediaDevices.enumerateDevices()
+                .then(devices => {
                     devices.forEach(device => {
                         let kind = device.kind;
                         if (!(kind in userDevices)) {
@@ -71,37 +66,39 @@
                         let default_option_string;
                         if (kind == 'audioinput') {
                             selector = document.getElementById('audio-source-menu');
-                            default_option_string = "Default Audio Input";
+                            default_option_string = 'Default Audio Input';
                         } else if (kind == 'videoinput') {
                             selector = document.getElementById('video-source-menu');
-                            default_option_string = "Default Video Input";
+                            default_option_string = 'Default Video Input';
                         }
                         if (selector) {
-                            let option = document.createElement("option");
-                            option.text = device.label.length ? device.label : default_option_string;
+                            let option = document.createElement('option');
+                            option.text = device.label.length ? device.label :
+                                default_option_string;
                             selector.options.add(option);
                         }
                     })
-                }).finally(() => {
-                let audio_selector = document.getElementById('audio-source-menu');
-                if (audio_selector.options.length === 0) {
-
-                    let option = document.createElement("option");
-                    option.text = "No audio inputs found.";
-                    audio_selector.options.add(option);
-                }
-                let video_selector = document.getElementById('video-source-menu');
-                if (video_selector.options.length === 0) {
-
-                    let option = document.createElement("option");
-                    option.text = "No video inputs found.";
-                    video_selector.options.add(option);
-                }
-            });
+                })
+                .finally(() => {
+                    let audio_selector = document.getElementById('audio-source-menu');
+                    if (audio_selector.options.length === 0) {
+                        let option = document.createElement('option');
+                        option.text = 'No audio inputs found.';
+                        audio_selector.options.add(option);
+                    }
+                    let video_selector = document.getElementById('video-source-menu');
+                    if (video_selector.options.length === 0) {
+                        let option = document.createElement('option');
+                        option.text = 'No video inputs found.';
+                        video_selector.options.add(option);
+                    }
+                });
 
             // open client connection even if no media capture devices found.
             // allows consumer only participants
-            createAndSendOffer();
+            // await createAndSendOffer(peerConnection['host']);
+
+            sendMessage({ message_type: MESSAGE_TYPE.CANDIDATE, content: 'join meeting' });
 
         } catch (err) {
             console.error(err);
@@ -111,8 +108,11 @@
     const endChat = async() => {
         code = null;
 
-        peerConnection.close();
-        peerConnection = null;
+        for (let key in peerConnection) {
+            peerConnection[key].close();
+        }
+        // peerConnection.close();
+        peerConnection = {};
 
         signaling.close(1000, 'Client ended the session.');
         signaling = null;
@@ -151,7 +151,7 @@
         });
 
         pc.onnegotiationneeded = async() => {
-            await createAndSendOffer();
+            await createAndSendOffer(pc);
         };
 
         pc.onicecandidate = (iceEvent) => {
@@ -195,42 +195,55 @@
             };
         };
 
+        userAudioStream.getTracks().forEach(
+            track => senders.push(pc.addTrack(track, userAudioStream)));
+
+        userVideoStream.getTracks().forEach(
+            track => senders.push(
+                peerConnection['host'].addTrack(track, userVideoStream)));
+
         return pc;
     };
 
-    const addMessageHandler =
-        () => {
-            signaling.onmessage = async(message) => {
-                const data = JSON.parse(message.data);
+    const addMessageHandler = () => {
+        signaling.onmessage = async(message) => {
+            const data = JSON.parse(message.data);
 
-                if (!data) {
-                    return;
+            if (!data) {
+                return;
+            }
+
+            const { message_type, content, peer_id } = data;
+            try {
+                if (!(peer_id in peerConnection)) {
+                    peerConnection[peer_id] = createPeerConnection();
+                    await createAndSendOffer(peerConnection[peer_id]);
                 }
 
-                const { message_type, content } = data;
-                try {
-                    if (message_type === MESSAGE_TYPE.CANDIDATE && content) {
-                        await peerConnection.addIceCandidate(content);
-                    } else if (message_type === MESSAGE_TYPE.SDP) {
-                        if (content.type === 'offer') {
-                            await peerConnection.setRemoteDescription(content);
-                            const answer = await peerConnection.createAnswer();
-                            await peerConnection.setLocalDescription(answer);
-                            sendMessage({
-                                message_type: MESSAGE_TYPE.SDP,
-                                content: answer,
-                            });
-                        } else if (content.type === 'answer') {
-                            await peerConnection.setRemoteDescription(content);
-                        } else {
-                            console.log('Unsupported SDP type.');
-                        }
+                let pc = peerConnection[peer_id];
+
+                if (message_type === MESSAGE_TYPE.CANDIDATE && content) {
+                    await pc.addIceCandidate(content);
+                } else if (message_type === MESSAGE_TYPE.SDP) {
+                    if (content.type === 'offer') {
+                        await pc.setRemoteDescription(content);
+                        const answer = await pc.createAnswer();
+                        await pc.setLocalDescription(answer);
+                        sendMessage({
+                            message_type: MESSAGE_TYPE.SDP,
+                            content: answer,
+                        });
+                    } else if (content.type === 'answer') {
+                        await pc.setRemoteDescription(content);
+                    } else {
+                        console.log('Unsupported SDP type.');
                     }
-                } catch (err) {
-                    console.error(err);
                 }
+            } catch (err) {
+                console.error(err);
             }
         }
+    };
     const waitForOpenConnection =
         (socket) => {
             return new Promise((resolve, reject) => {
@@ -276,9 +289,9 @@
         }
 
     const createAndSendOffer =
-        async() => {
-            const offer = await peerConnection.createOffer();
-            await peerConnection.setLocalDescription(offer);
+        async(pc) => {
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
 
             sendMessage({
                 message_type: MESSAGE_TYPE.SDP,
@@ -301,7 +314,7 @@
     const shareFile = () => {
         if (file) {
             const channelLabel = file.name;
-            const channel = peerConnection.createDataChannel(channelLabel);
+            const channel = peerConnection['host'].createDataChannel(channelLabel);
             channel.binaryType = 'arraybuffer';
 
             channel.onopen = async() => {
