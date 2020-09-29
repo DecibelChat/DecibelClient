@@ -4,6 +4,7 @@
     const MESSAGE_TYPE = {
         SDP: 'SDP',
         CANDIDATE: 'CANDIDATE',
+        SERVER: 'SERVER'
     }
 
     const MAXIMUM_MESSAGE_SIZE = 65535;
@@ -26,6 +27,17 @@
 
             addMessageHandler();
 
+            getMedia().then(() => {
+                sendMessage({ message_type: MESSAGE_TYPE.SERVER, content: 'join meeting' })
+            });
+
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    const getMedia = async() => {
+        try {
             // make sure camera/microphone permissions are resolved before anything
             // else.
             try {
@@ -34,13 +46,13 @@
                 console.log(error);
             }
 
-            navigator.mediaDevices.getUserMedia({ audio: true })
+            await navigator.mediaDevices.getUserMedia({ audio: true })
                 .then((stream) => {
                     userAudioStream = stream;
                 })
                 .catch((err) => { userAudioStream = new MediaStream() });
 
-            navigator.mediaDevices.getUserMedia({ video: true })
+            await navigator.mediaDevices.getUserMedia({ video: true })
                 .then((stream) => {
                     userVideoStream = stream;
                 })
@@ -51,7 +63,7 @@
                     document.getElementById('self-view').srcObject = userVideoStream;
                 });
 
-            navigator.mediaDevices.enumerateDevices()
+            await navigator.mediaDevices.enumerateDevices()
                 .then(devices => {
                     devices.forEach(device => {
                         let kind = device.kind;
@@ -73,8 +85,8 @@
                         }
                         if (selector) {
                             let option = document.createElement('option');
-                            option.text = device.label.length ? device.label :
-                                default_option_string;
+                            option.text =
+                                device.label.length ? device.label : default_option_string;
                             selector.options.add(option);
                         }
                     })
@@ -93,13 +105,6 @@
                         video_selector.options.add(option);
                     }
                 });
-
-            // open client connection even if no media capture devices found.
-            // allows consumer only participants
-            // await createAndSendOffer(peerConnection['host']);
-
-            sendMessage({ message_type: MESSAGE_TYPE.CANDIDATE, content: 'join meeting' });
-
         } catch (err) {
             console.error(err);
         }
@@ -199,8 +204,7 @@
             track => senders.push(pc.addTrack(track, userAudioStream)));
 
         userVideoStream.getTracks().forEach(
-            track => senders.push(
-                peerConnection['host'].addTrack(track, userVideoStream)));
+            track => senders.push(pc.addTrack(track, userVideoStream)));
 
         return pc;
     };
@@ -217,7 +221,6 @@
             try {
                 if (!(peer_id in peerConnection)) {
                     peerConnection[peer_id] = createPeerConnection();
-                    await createAndSendOffer(peerConnection[peer_id]);
                 }
 
                 let pc = peerConnection[peer_id];
