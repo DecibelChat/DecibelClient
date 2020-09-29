@@ -46,13 +46,15 @@
                 console.log(error);
             }
 
-            await navigator.mediaDevices.getUserMedia({ audio: true })
+            let promises = [];
+
+            promises.push(navigator.mediaDevices.getUserMedia({ audio: true })
                 .then((stream) => {
                     userAudioStream = stream;
                 })
-                .catch((err) => { userAudioStream = new MediaStream() });
+                .catch((err) => { userAudioStream = new MediaStream() }));
 
-            await navigator.mediaDevices.getUserMedia({ video: true })
+            promises.push(navigator.mediaDevices.getUserMedia({ video: true })
                 .then((stream) => {
                     userVideoStream = stream;
                 })
@@ -61,9 +63,9 @@
                 })
                 .finally(() => {
                     document.getElementById('self-view').srcObject = userVideoStream;
-                });
+                }));
 
-            await navigator.mediaDevices.enumerateDevices()
+            promises.push(navigator.mediaDevices.enumerateDevices()
                 .then(devices => {
                     devices.forEach(device => {
                         let kind = device.kind;
@@ -104,7 +106,9 @@
                         option.text = 'No video inputs found.';
                         video_selector.options.add(option);
                     }
-                });
+                }));
+
+            await Promise.all(promises);
         } catch (err) {
             console.error(err);
         }
