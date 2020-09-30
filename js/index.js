@@ -9,13 +9,12 @@
     }
 
     class Peer {
-        constructor() {
+        constructor(parent = document.getElementById('remote-view-container')) {
             this.video = document.createElement("video");
             this.video.id = "remote-view-" + Object.keys(peerConnection).length;
             this.video.autoplay = true;
 
-            let container = document.getElementById("remote-view-container");
-            container.appendChild(this.video);
+            parent.appendChild(this.video);
 
             this.connection = createPeerConnection(this.video);
 
