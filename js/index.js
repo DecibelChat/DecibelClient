@@ -343,19 +343,19 @@ const addMessageHandler = () => {
           console.log('Unsupported SDP type.');
         }
       }
-      else if (message_type === MESSAGE_TYPE.DELETE)
-      {
-        peerConnection[peer_id].video.remove();
-        peerConnection[peer_id].connection.close();
-        delete peerConnection[peer_id];
-
-        updateRemoteViewLayout();
-      }
       else if (message_type === MESSAGE_TYPE.SERVER)
       {
-        if (content === 'your id')
+        if (content === 'delete')
         {
-          ƒhost_id = peer_id;
+          peerConnection[peer_id].video.remove();
+          peerConnection[peer_id].connection.close();
+          delete peerConnection[peer_id];
+
+          updateRemoteViewLayout();
+        }
+        else if (content === 'your id')
+        {
+          host_id = peer_id;
         }
       }
     }
