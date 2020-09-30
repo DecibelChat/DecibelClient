@@ -20,7 +20,10 @@
             this.connection = createPeerConnection(this.video);
 
             this.connection.ontrack = (event) => {
-                this.video.srcObject = event.streams[0];
+                if (this.video.srcObject !== event.streams[0]) {
+                    this.video.srcObject = event.streams[0];
+                    console.log(this.video.id + ": new remote stream");
+                }
             };
         }
     };
@@ -177,9 +180,9 @@
             iceServers: [{ urls: 'stun:stun.m.test.com:19000' }],
         });
 
-        pc.onnegotiationneeded = async() => {
-            await createAndSendOffer(pc);
-        };
+        // pc.onnegotiationneeded = async() => {
+        //     await createAndSendOffer(pc);
+        // };
 
         pc.onicecandidate = (iceEvent) => {
             if (iceEvent && iceEvent.candidate) {
@@ -279,7 +282,8 @@
                 let pc = peerConnection[peer_id].connection;
 
                 if (message_type === MESSAGE_TYPE.CANDIDATE && content) {
-                    await pc.addIceCandidate(content);
+                    console.log("trying to add candidate" + peer_id + " with content: " + content);
+                    pc.addIceCandidate(content).then(() => { console.log('AddIceCandidate success.'); }, (error) => { console.log(`Failed to add ICE candidate: ${error.toString()}`); });
                 } else if (message_type === MESSAGE_TYPE.SDP) {
                     if (content.type === 'offer') {
                         await pc.setRemoteDescription(content);
@@ -290,7 +294,7 @@
                             content: answer,
                         });
                     } else if (content.type === 'answer') {
-                        await pc.setRemoteDescription(content);
+                        pc.setRemoteDescription(content);
                     } else {
                         console.log('Unsupported SDP type.');
                     }
@@ -302,7 +306,7 @@
                     updateRemoteViewLayout();
                 }
             } catch (err) {
-                console.error(err);
+                console.log(err);
             }
         }
     };
