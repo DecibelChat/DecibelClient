@@ -11,7 +11,7 @@
     class Peer {
         constructor(parent = document.getElementById('remote-view-container')) {
             this.video = document.createElement("video");
-            this.video.id = "remote-view-" + Object.keys(peerConnection).length;
+            this.video.id = `remote-view-${Object.keys(peerConnection).length}`;
             this.video.autoplay = true;
 
             parent.appendChild(this.video);
@@ -21,7 +21,7 @@
             this.connection.ontrack = (event) => {
                 if (this.video.srcObject !== event.streams[0]) {
                     this.video.srcObject = event.streams[0];
-                    console.log(this.video.id + ": new remote stream");
+                    console.log(`${this.video.id}: new remote stream`);
                 }
             };
         }
@@ -38,12 +38,16 @@
     let userVideoStream;
     let displayMediaStream;
     let file;
+    let host_id;
+
+    let server_url = 'sf.davidmorra.com';
+    let server_port = 16666;
 
     const startChat = async() => {
         try {
             showChatRoom();
 
-            signaling = new WebSocket('wss://sf.davidmorra.com:16666');
+            signaling = new WebSocket(`wss://${server_url}:${server_port}`);
 
             addMessageHandler();
 
@@ -179,9 +183,9 @@
             iceServers: [{ urls: 'stun:stun.m.test.com:19000' }],
         });
 
-        // pc.onnegotiationneeded = async() => {
-        //     await createAndSendOffer(pc);
-        // };
+        pc.onnegotiationneeded = async() => {
+            await createAndSendOffer(pc);
+        };
 
         pc.onicecandidate = (iceEvent) => {
             if (iceEvent && iceEvent.candidate) {
@@ -240,8 +244,8 @@
             desired_rows = Math.ceil(num_peers / desired_columns);
         }
 
-        let desired_column_str = "repeat(" + desired_columns + ", 1fr)";
-        let desired_row_str = "repeat(" + desired_rows + ", 1fr)";
+        let desired_column_str = `repeat(${desired_columns}, 1fr)`;
+        let desired_row_str = `repeat(${desired_rows}, 1fr)`;
 
         let current_columns = container.style.gridTemplateColumns;
         let current_rows = container.style.gridTemplateRows;
@@ -281,7 +285,7 @@
                 let pc = peerConnection[peer_id].connection;
 
                 if (message_type === MESSAGE_TYPE.CANDIDATE && content) {
-                    console.log("trying to add candidate" + peer_id + " with content: " + content);
+                    console.log(`trying to add candidate ${peer_id} with content: ${content}`);
                     pc.addIceCandidate(content).then(() => { console.log('AddIceCandidate success.'); }, (error) => { console.log(`Failed to add ICE candidate: ${error.toString()}`); });
                 } else if (message_type === MESSAGE_TYPE.SDP) {
                     if (content.type === 'offer') {
@@ -303,6 +307,10 @@
                     delete peerConnection[peer_id];
 
                     updateRemoteViewLayout();
+                } else if (message_type === MESSAGE_TYPE.SERVER) {
+                    if (content === "your id") {
+                        host_id = peer_id;
+                    }
                 }
             } catch (err) {
                 console.log(err);
@@ -379,20 +387,23 @@
     const shareFile = () => {
         if (file) {
             const channelLabel = file.name;
-            const channel = peerConnection['host'].createDataChannel(channelLabel);
-            channel.binaryType = 'arraybuffer';
+            for (let key in peerConnection) {
 
-            channel.onopen = async() => {
-                const arrayBuffer = await file.arrayBuffer();
-                for (let i = 0; i < arrayBuffer.byteLength; i += MAXIMUM_MESSAGE_SIZE) {
-                    channel.send(arrayBuffer.slice(i, i + MAXIMUM_MESSAGE_SIZE));
-                }
-                channel.send(END_OF_FILE_MESSAGE);
-            };
+                const channel = peerConnection[key].createDataChannel(channelLabel);
+                channel.binaryType = 'arraybuffer';
 
-            channel.onclose = () => {
-                closeDialog();
-            };
+                channel.onopen = async() => {
+                    const arrayBuffer = await file.arrayBuffer();
+                    for (let i = 0; i < arrayBuffer.byteLength; i += MAXIMUM_MESSAGE_SIZE) {
+                        channel.send(arrayBuffer.slice(i, i + MAXIMUM_MESSAGE_SIZE));
+                    }
+                    channel.send(END_OF_FILE_MESSAGE);
+                };
+
+                channel.onclose = () => {
+                    closeDialog();
+                };
+            }
         }
     };
 
