@@ -260,6 +260,11 @@ const updateRemoteViewLayout = async () => {
   let desired_columns = 1;
 
   let num_peers = Object.keys(peerConnection).length;
+  if (host_id in peerConnection)
+  {
+    num_peers--;
+  }
+
   if (num_peers > 1)
   {
     desired_columns = 2;
@@ -280,13 +285,16 @@ const updateRemoteViewLayout = async () => {
     let ii = 0
     for (let key in peerConnection)
     {
-      let row    = Math.floor(ii / desired_columns) + 1;
-      let column = ii % desired_columns + 1;
+      if (key !== host_id)
+      {
+        let row    = Math.floor(ii / desired_columns) + 1;
+        let column = ii % desired_columns + 1;
 
-      peerConnection[key].video.style.gridRowStart    = row;
-      peerConnection[key].video.style.gridColumnStart = column;
+        peerConnection[key].video.style.gridRowStart    = row;
+        peerConnection[key].video.style.gridColumnStart = column;
 
-      ii++;
+        ii++;
+      }
     }
   }
 };
@@ -303,59 +311,62 @@ const addMessageHandler = () => {
     const {message_type, content, peer_id} = data;
     try
     {
-      if (!(peer_id in peerConnection))
+      if (message_type === MESSAGE_TYPE.SERVER && content === 'your id')
       {
-        peerConnection[peer_id] = new Peer();
-        updateRemoteViewLayout();
+        host_id = peer_id;
       }
-
-      let pc = peerConnection[peer_id].connection;
-
-      if (message_type === MESSAGE_TYPE.CANDIDATE && content)
+      else
       {
-        console.log(`trying to add candidate ${peer_id} with content: ${content}`);
-        pc.addIceCandidate(content).then(
-            () => {
-              console.log('AddIceCandidate success.');
-            },
-            (error) => {
-              console.log(`Failed to add ICE candidate: ${error.toString()}`);
-            });
-      }
-      else if (message_type === MESSAGE_TYPE.SDP)
-      {
-        if (content.type === 'offer')
+        if (!(peer_id in peerConnection))
         {
-          await pc.setRemoteDescription(content);
-          const answer = await pc.createAnswer();
-          await pc.setLocalDescription(answer);
-          sendMessage({
-            message_type : MESSAGE_TYPE.SDP,
-            content : answer,
-          });
-        }
-        else if (content.type === 'answer')
-        {
-          pc.setRemoteDescription(content);
-        }
-        else
-        {
-          console.log('Unsupported SDP type.');
-        }
-      }
-      else if (message_type === MESSAGE_TYPE.SERVER)
-      {
-        if (content === 'delete')
-        {
-          peerConnection[peer_id].video.remove();
-          peerConnection[peer_id].connection.close();
-          delete peerConnection[peer_id];
-
+          peerConnection[peer_id] = new Peer();
           updateRemoteViewLayout();
         }
-        else if (content === 'your id')
+
+        let pc = peerConnection[peer_id].connection;
+
+        if (message_type === MESSAGE_TYPE.CANDIDATE && content)
         {
-          host_id = peer_id;
+          console.log(`trying to add candidate ${peer_id} with content: ${content}`);
+          pc.addIceCandidate(content).then(
+              () => {
+                console.log('AddIceCandidate success.');
+              },
+              (error) => {
+                console.log(`Failed to add ICE candidate: ${error.toString()}`);
+              });
+        }
+        else if (message_type === MESSAGE_TYPE.SDP)
+        {
+          if (content.type === 'offer')
+          {
+            await pc.setRemoteDescription(content);
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+            sendMessage({
+              message_type : MESSAGE_TYPE.SDP,
+              content : answer,
+            });
+          }
+          else if (content.type === 'answer')
+          {
+            pc.setRemoteDescription(content);
+          }
+          else
+          {
+            console.log('Unsupported SDP type.');
+          }
+        }
+        else if (message_type === MESSAGE_TYPE.SERVER)
+        {
+          if (content === 'delete')
+          {
+            peerConnection[peer_id].video.remove();
+            peerConnection[peer_id].connection.close();
+            delete peerConnection[peer_id];
+
+            updateRemoteViewLayout();
+          }
         }
       }
     }
