@@ -445,12 +445,12 @@ const createAndSendOffer =
 const showChatRoom =
     () => {
       document.getElementById('start').style.display     = 'none';
-      document.getElementById('chat-room').style.display = 'grid';
+      document.getElementById('chat-room').style.display = '';
     }
 
 const showLandingPage =
     () => {
-      document.getElementById('start').style.display     = 'grid';
+      document.getElementById('start').style.display     = '';
       document.getElementById('chat-room').style.display = 'none';
     }
 

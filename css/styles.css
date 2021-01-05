@@ -5,7 +5,8 @@ xhtml, body {
 
 body {
     background-color: #013d4aed;
-    padding: 20vh;
+    padding-top: 20vh;
+    padding-bottom: 20vh;
 }
 
 #start {
@@ -13,10 +14,10 @@ body {
 }
 
 #code-input {
-    border-radius: 30px;
-    margin-bottom: 20px;
-    padding: 5px;
-    font-size: 16px;
+    border-radius: 1.5ex;
+    margin-bottom: 1.75ex;
+    padding: 1ex;
+    font-size: 1.75vh;
     text-align: center;
     border: none;
 }
@@ -32,7 +33,7 @@ button {
     display: block;
     margin: auto;
     padding: 10px;
-    font-size: 16px;
+    font-size: 1.75vh;
     color: white;
 }
 
