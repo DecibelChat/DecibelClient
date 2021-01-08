@@ -69,6 +69,7 @@ video {
 #self-view {
     background-color: #00000040;
     grid-area: 1 / 1 / 2 / 2;
+    z-index: 1;
 }
 
 #input-source-selection {

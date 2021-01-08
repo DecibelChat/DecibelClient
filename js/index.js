@@ -586,3 +586,18 @@ document.getElementById('select-file-input').addEventListener('change', (event) 
 
 document.getElementById('ok-button').addEventListener('click', () => { shareFile(); });
 })();
+
+document.getElementById('self-view')
+    .addEventListener("mousedown", () => {window.addEventListener("mousemove", moveSelfView, true)}, false);
+window.addEventListener("mouseup", () => {window.removeEventListener("mousemove", moveSelfView, true)}, false);
+
+function moveSelfView(e)
+{
+  element                = document.getElementById('self-view');
+  original_size          = element.getBoundingClientRect();
+  element.style.position = "absolute";
+  element.style.width    = original_size.width + "px";
+
+  element.style.top  = (e.clientY - (original_size.height / 2)) + "px";
+  element.style.left = (e.clientX - (original_size.width / 2)) + "px";
+};
