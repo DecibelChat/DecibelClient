@@ -28,6 +28,13 @@ class Peer
       }
     };
   }
+
+  close()
+  {
+    document.getElementById(this.video.id).remove();
+    this.video.remove();
+    this.connection.close();
+  }
 };
 
 const MAXIMUM_MESSAGE_SIZE = 65535;
@@ -43,15 +50,23 @@ let displayMediaStream;
 let file;
 let host_id;
 
-let server_url  = 'sf.davidmorra.com';
-let server_port = 16666;
+let params = {
+  "local" : {"server_url" : "localhost", "port" : 16666, "protocol" : "ws"},
+  "remote" : {"server_url" : "sf.davidmorra.com", "port" : 16666, "protocol" : "wss"}
+};
+let mode = "local"
 
 const startChat = async () => {
   try
   {
     showChatRoom();
 
-    signaling = new WebSocket(`wss://${server_url}:${server_port}`);
+    if (mode == "local")
+    {
+      params[mode].server_url = prompt("Developer Mode: Enter a server URL.", params[mode].server_url);
+    }
+
+    signaling = new WebSocket(`${params[mode].protocol}://${params[mode].server_url}:${params[mode].port}`);
 
     addMessageHandler();
 
@@ -80,21 +95,13 @@ const getMedia = async () => {
     let promises = [];
 
     promises.push(navigator.mediaDevices.getUserMedia({audio : true})
-                      .then((stream) => {
-                        userAudioStream = stream;
-                      })
+                      .then((stream) => { userAudioStream = stream; })
                       .catch((err) => {userAudioStream = new MediaStream()}));
 
     promises.push(navigator.mediaDevices.getUserMedia({video : true})
-                      .then((stream) => {
-                        userVideoStream = stream;
-                      })
-                      .catch((err) => {
-                        userVideoStream = new MediaStream();
-                      })
-                      .finally(() => {
-                        document.getElementById('self-view').srcObject = userVideoStream;
-                      }));
+                      .then((stream) => { userVideoStream = stream; })
+                      .catch((err) => { userVideoStream = new MediaStream(); })
+                      .finally(() => { document.getElementById('self-view').srcObject = userVideoStream; }));
 
     promises.push(navigator.mediaDevices.enumerateDevices()
                       .then(devices => {devices.forEach(device => {
@@ -156,7 +163,7 @@ const endChat = async () => {
 
   for (let key in peerConnection)
   {
-    peerConnection[key].connection.close();
+    peerConnection[key].close();
   }
   // peerConnection.close();
   peerConnection = {};
@@ -168,25 +175,19 @@ const endChat = async () => {
 
   if (userAudioStream)
   {
-    userAudioStream.getTracks().forEach(track => {
-      track.stop();
-    });
+    userAudioStream.getTracks().forEach(track => { track.stop(); });
   }
   userAudioStream = null;
 
   if (userVideoStream)
   {
-    userVideoStream.getTracks().forEach(track => {
-      track.stop();
-    });
+    userVideoStream.getTracks().forEach(track => { track.stop(); });
   }
   userVideoStream = null;
 
   if (displayMediaStream)
   {
-    displayMediaStream.getTracks().forEach(track => {
-      track.stop();
-    });
+    displayMediaStream.getTracks().forEach(track => { track.stop(); });
   }
   displayMediaStream = null;
 
@@ -199,9 +200,7 @@ const createPeerConnection = () => {
     iceServers : [ {urls : 'stun:stun.m.test.com:19000'} ],
   });
 
-  pc.onnegotiationneeded = async () => {
-    await createAndSendOffer(pc);
-  };
+  pc.onnegotiationneeded = async () => { await createAndSendOffer(pc); };
 
   pc.onicecandidate = (iceEvent) => {
     if (iceEvent && iceEvent.candidate)
@@ -277,24 +276,21 @@ const updateRemoteViewLayout = async () => {
   let current_columns = container.style.gridTemplateColumns;
   let current_rows    = container.style.gridTemplateRows;
 
-  if (desired_column_str !== current_columns || desired_row_str !== current_rows)
+  container.style.gridTemplateColumns = desired_column_str;
+  container.style.gridTemplateRows    = desired_row_str;
+
+  let ii = 0
+  for (let key in peerConnection)
   {
-    container.style.gridTemplateColumns = desired_column_str;
-    container.style.gridTemplateRows    = desired_row_str;
-
-    let ii = 0
-    for (let key in peerConnection)
+    if (key !== host_id)
     {
-      if (key !== host_id)
-      {
-        let row    = Math.floor(ii / desired_columns) + 1;
-        let column = ii % desired_columns + 1;
+      let row    = Math.floor(ii / desired_columns) + 1;
+      let column = ii % desired_columns + 1;
 
-        peerConnection[key].video.style.gridRowStart    = row;
-        peerConnection[key].video.style.gridColumnStart = column;
+      peerConnection[key].video.style.gridRowStart    = row;
+      peerConnection[key].video.style.gridColumnStart = column;
 
-        ii++;
-      }
+      ii++;
     }
   }
 };
@@ -328,13 +324,8 @@ const addMessageHandler = () => {
         if (message_type === MESSAGE_TYPE.CANDIDATE && content)
         {
           console.log(`trying to add candidate ${peer_id} with content: ${content}`);
-          pc.addIceCandidate(content).then(
-              () => {
-                console.log('AddIceCandidate success.');
-              },
-              (error) => {
-                console.log(`Failed to add ICE candidate: ${error.toString()}`);
-              });
+          pc.addIceCandidate(content).then(()      => { console.log('AddIceCandidate success.'); },
+                                           (error) => { console.log(`Failed to add ICE candidate: ${error.toString()}`); });
         }
         else if (message_type === MESSAGE_TYPE.SDP)
         {
@@ -361,8 +352,7 @@ const addMessageHandler = () => {
         {
           if (content === 'delete')
           {
-            peerConnection[peer_id].video.remove();
-            peerConnection[peer_id].connection.close();
+            peerConnection[peer_id].close();
             delete peerConnection[peer_id];
 
             updateRemoteViewLayout();
@@ -472,9 +462,7 @@ const shareFile = () => {
         channel.send(END_OF_FILE_MESSAGE);
       };
 
-      channel.onclose = () => {
-        closeDialog();
-      };
+      channel.onclose = () => { closeDialog(); };
     }
   }
 };
@@ -531,18 +519,14 @@ document.getElementById('mic-mute-button').addEventListener('click', async () =>
 
   if (current_value.includes('slash'))
   {
-    userAudioStream.getTracks().forEach(track => {
-      track.enabled = true;
-    });
+    userAudioStream.getTracks().forEach(track => { track.enabled = true; });
 
     icon.classList.toggle('fa-microphone');
     button.style.backgroundColor = ''
   }
   else
   {
-    userAudioStream.getTracks().forEach(track => {
-      track.enabled = false;
-    });
+    userAudioStream.getTracks().forEach(track => { track.enabled = false; });
     icon.classList.toggle('fa-microphone-slash');
     button.style.backgroundColor = '#97a2ab'
   }
@@ -555,17 +539,13 @@ document.getElementById('camera-mute-button').addEventListener('click', async ()
 
   if (current_value.includes('slash'))
   {
-    userVideoStream.getTracks().forEach(track => {
-      track.enabled = true;
-    });
+    userVideoStream.getTracks().forEach(track => { track.enabled = true; });
     icon.classList.toggle('fa-video');
     button.style.backgroundColor = ''
   }
   else
   {
-    userVideoStream.getTracks().forEach(track => {
-      track.enabled = false;
-    });
+    userVideoStream.getTracks().forEach(track => { track.enabled = false; });
     icon.classList.toggle('fa-video-slash');
     button.style.backgroundColor = '#97a2ab'
   }
@@ -594,20 +574,15 @@ document.getElementById('stop-share-button').addEventListener('click', async () 
   document.getElementById('stop-share-button').style.display = 'none';
 });
 
-document.getElementById('share-file-button').addEventListener('click', () => {
-  document.getElementById('select-file-dialog').style.display = 'block';
-});
+document.getElementById('share-file-button')
+    .addEventListener('click', () => { document.getElementById('select-file-dialog').style.display = 'block'; });
 
-document.getElementById('cancel-button').addEventListener('click', () => {
-  closeDialog();
-});
+document.getElementById('cancel-button').addEventListener('click', () => { closeDialog(); });
 
 document.getElementById('select-file-input').addEventListener('change', (event) => {
   file                                          = event.target.files[0];
   document.getElementById('ok-button').disabled = !file;
 });
 
-document.getElementById('ok-button').addEventListener('click', () => {
-  shareFile();
-});
+document.getElementById('ok-button').addEventListener('click', () => { shareFile(); });
 })();
