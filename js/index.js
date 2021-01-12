@@ -5,7 +5,9 @@ const MESSAGE_TYPE = {
   SDP : 'SDP',
   CANDIDATE : 'CANDIDATE',
   SERVER : 'SERVER',
-  DELETE : 'DELETE'
+  DELETE : 'DELETE',
+  VOLUME: 'VOLUME',
+  POSITION: 'POSITION'
 }
 
 class Peer
@@ -29,6 +31,10 @@ class Peer
     };
   }
 
+  set_volume(level) 
+  {
+    this.video.volume = level;
+  }
   close()
   {
     document.getElementById(this.video.id).remove();
@@ -70,7 +76,10 @@ const startChat = async () => {
 
     addMessageHandler();
 
-    getMedia().then(() => {sendMessage({message_type : MESSAGE_TYPE.SERVER, content : 'join meeting'})});
+    getMedia().then(() => {
+      sendMessage({message_type : MESSAGE_TYPE.SERVER, content : 'join meeting'});
+      sendMessage({ message_type: MESSAGE_TYPE.POSITION, content: { position: { x: 1, y: 0, z: 0 } } });
+    });
   }
   catch (err)
   {
@@ -310,6 +319,10 @@ const addMessageHandler = () => {
       if (message_type === MESSAGE_TYPE.SERVER && content === 'your id')
       {
         host_id = peer_id;
+      }
+      else if (message_type === MESSAGE_TYPE.VOLUME) 
+      {
+        peerConnection[peer_id].set_volume(content.volume);
       }
       else
       {
