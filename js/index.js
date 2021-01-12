@@ -505,6 +505,16 @@ document.getElementById('start-button').addEventListener('click', async () => {
   }
 });
 
+document.getElementById("code-input").addEventListener("keyup", event => {
+    if(event.key !== "Enter")
+    {
+        return;
+    }
+
+    document.getElementById("start-button").click();
+    event.preventDefault(); // No need to `return false;`.
+});
+
 document.getElementById('end-button').addEventListener('click', async () => {
   if (code)
   {
