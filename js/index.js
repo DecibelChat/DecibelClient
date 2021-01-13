@@ -57,10 +57,33 @@ let file;
 let host_id;
 
 let params = {
-  "local" : {"server_url" : "localhost", "port" : 16666, "protocol" : "ws"},
+  "local" : {"protocol" : "ws"},
   "remote" : {"server_url" : "sf.davidmorra.com", "port" : 16666, "protocol" : "wss"}
 };
 let mode = "local"
+
+function setCookie(name,value,days) {
+    var expires = "";
+    if (days) {
+        var date = new Date();
+        date.setTime(date.getTime() + (days*24*60*60*1000));
+        expires = "; expires=" + date.toUTCString();
+    }
+    document.cookie = name + "=" + (value || "")  + expires + "; path=/";
+}
+function getCookie(name) {
+    var nameEQ = name + "=";
+    var ca = document.cookie.split(';');
+    for(var i=0;i < ca.length;i++) {
+        var c = ca[i];
+        while (c.charAt(0)==' ') c = c.substring(1,c.length);
+        if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length,c.length);
+    }
+    return null;
+}
+function eraseCookie(name) {   
+    document.cookie = name +'=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+}
 
 const startChat = async () => {
   try
@@ -69,7 +92,23 @@ const startChat = async () => {
 
     if (mode == "local")
     {
-      params[mode].server_url = prompt("Developer Mode: Enter a server URL.", params[mode].server_url);
+        if (!getCookie("server_url"))
+        {
+            setCookie("server_url", "localhost");
+        }
+
+        if (!getCookie("server_port"))
+        {
+            setCookie("server_port", "16666");
+        }
+
+      var input = prompt("Developer Mode: Enter a server URL.", `${getCookie("server_url")}:${getCookie("server_port")}`);
+      var input_pieces = input.split(':');
+      params[mode].server_url = input_pieces[0];
+      params[mode].port = input_pieces[1];
+
+      setCookie("server_url", params[mode].server_url);
+      setCookie("server_port", params[mode].port);
     }
 
     signaling = new WebSocket(`${params[mode].protocol}://${params[mode].server_url}:${params[mode].port}`);
@@ -254,10 +293,15 @@ const createPeerConnection = () => {
     };
   };
 
-  userAudioStream.getTracks().forEach(track => senders.push(pc.addTrack(track, userAudioStream)));
-
-  userVideoStream.getTracks().forEach(track => senders.push(pc.addTrack(track, userVideoStream)));
-
+  if (userAudioStream){
+    userAudioStream.getTracks().forEach(track => senders.push(pc.addTrack(track, userAudioStream)));
+  }
+  if (userVideoStream){
+    userVideoStream.getTracks().forEach(track => senders.push(pc.addTrack(track, userVideoStream)));
+  }
+  if (displayMediaStream){
+    displayMediaStream.getTracks().forEach(track => senders.push(pc.addTrack(track, displayMediaStream)));
+  }
   return pc;
 };
 
@@ -575,26 +619,33 @@ document.getElementById('camera-mute-button').addEventListener('click', async ()
 });
 
 document.getElementById('share-button').addEventListener('click', async () => {
-  if (!displayMediaStream)
+  let button        = document.getElementById('share-button');
+  let icon          = button.children[0];
+  let current_value = icon.classList.value;
+
+  if (current_value.includes('slash'))
+  {
+    if (senders.length != 0){
+      senders.find(sender => sender.track.kind === 'video').replaceTrack(userVideoStream.getTracks().find(track => track.kind === 'video'));
+    }
+      document.getElementById('self-view').srcObject = userVideoStream;
+      displayMediaStream = null;
+
+      icon.classList.toggle('fa-eye');
+  }
+  else
   {
     displayMediaStream = await navigator.mediaDevices.getDisplayMedia();
+    if (senders.length != 0){
+      senders.find(sender => sender.track.kind === 'video').replaceTrack(displayMediaStream.getTracks()[0]);
+    }
+
+      // show what you are showing in your "self-view" video.
+      document.getElementById('self-view').srcObject = displayMediaStream;
+
+      icon.classList.toggle('fa-eye-slash');
+      // button.style.backgroundColor = '#97a2ab'
   }
-  senders.find(sender => sender.track.kind === 'video').replaceTrack(displayMediaStream.getTracks()[0]);
-
-  // show what you are showing in your "self-view" video.
-  document.getElementById('self-view').srcObject = displayMediaStream;
-
-  // hide the share button and display the "stop-sharing" one
-  document.getElementById('share-button').style.display      = 'none';
-  document.getElementById('stop-share-button').style.display = 'inline';
-});
-
-document.getElementById('stop-share-button').addEventListener('click', async () => {
-  senders.find(sender => sender.track.kind === 'video')
-      .replaceTrack(userVideoStream.getTracks().find(track => track.kind === 'video'));
-  document.getElementById('self-view').srcObject             = userVideoStream;
-  document.getElementById('share-button').style.display      = 'inline';
-  document.getElementById('stop-share-button').style.display = 'none';
 });
 
 document.getElementById('share-file-button')
@@ -614,9 +665,20 @@ document.getElementById('self-view')
     .addEventListener("mousedown", () => {window.addEventListener("mousemove", moveSelfView, true)}, false);
 window.addEventListener("mouseup", () => {window.removeEventListener("mousemove", moveSelfView, true)}, false);
 
+document.getElementById('self-view').addEventListener("dblclick", () => {
+  element                = document.getElementById('self-view-parent');
+
+  element.style.gridArea = '1 / 1 / 2 / 2'
+
+  element.style.position = '';
+  element.style.width = '';
+  element.style.top = '';
+  element.style.left = '';
+}, false);
+
 function moveSelfView(e)
 {
-  element                = document.getElementById('self-view');
+  element                = document.getElementById('self-view-parent');
   original_size          = element.getBoundingClientRect();
   element.style.position = "absolute";
   element.style.width    = original_size.width + "px";

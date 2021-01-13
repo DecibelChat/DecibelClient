@@ -19,19 +19,18 @@
 
 <body>
     <div id="chat-room" style="display: none;">
-        <div id="in-call-buttons">
-            <button id="end-button" enabled>End Session</button>
-            <button id="mic-mute-button"><i class="fas fa-microphone"></i></button>
-            <button id="camera-mute-button"><i class="fas fa-video"></i></button>
-        </div>
-        <video id="self-view" autoplay></video>
-        <div id="remote-view-container">
-            <div id="view-buttons">
-                <button class="view-button" id="share-button"><i id="share-button-icon" class="fas fa-eye"></i></button>
-                <button class="view-button" style="display: none" id="stop-share-button"><i id="stop-share-button-icon"
-                        class="fas fa-eye-slash"></i></button>
-                <button class="view-button" id="share-file-button"><i class="far fa-file-alt"></i></button>
+        <div id="self-view-parent">
+            <div id="in-call-buttons">
+                <button id="end-button" enabled><i class="fas fa-phone-slash"></i></button>
+                <button id="mic-mute-button"><i class="fas fa-microphone"></i></button>
+                <button id="camera-mute-button"><i class="fas fa-video"></i></button>
+                <button id="share-button"><i id="share-button-icon" class="fas fa-eye"></i></button>
+                <button id="share-file-button"><i class="far fa-file-alt"></i></button>
             </div>
+            <video id="self-view" autoplay>
+            </video>
+        </div>
+        <div id="remote-view-container">
         </div>
         <div id="input-source-selection">
             <select id="audio-source-menu" name="audio-source-menu"></select>
