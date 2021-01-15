@@ -52,9 +52,9 @@ let host_id;
 
 let params = {
   "local" : {"server_url" : "localhost", "port" : 16666, "protocol" : "ws"},
-  "remote" : {"server_url" : "sf.davidmorra.com", "port" : 16666, "protocol" : "wss"}
+  "remote" : {"server_url" : "internal.decibelchat.com", "port" : 16666, "protocol" : "wss"}
 };
-let mode = "local"
+let mode = "remote"
 
 const startChat = async () => {
   try
