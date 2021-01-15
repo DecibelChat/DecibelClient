@@ -56,8 +56,11 @@ let displayMediaStream;
 let file;
 let host_id;
 
-let params = {"local" : {"protocol" : "ws"}, "remote" : {"server_url" : "sf.davidmorra.com", "port" : 16666, "protocol" : "wss"}};
-let mode   = "local"
+let params = {
+  "local" : {"protocol" : "ws"},
+  "remote" : {"server_url" : "internal.decibelchat.com", "port" : 16666, "protocol" : "wss"}
+};
+let mode = "remote"
 
 function setCookie(name, value, days)
 {
