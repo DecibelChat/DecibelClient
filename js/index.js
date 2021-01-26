@@ -60,7 +60,16 @@ let params = {
   "local" : {"protocol" : "ws"},
   "remote" : {"server_url" : "internal.decibelchat.com", "port" : 16666, "protocol" : "wss"}
 };
-let mode = "remote"
+
+function inTestingMode()
+{
+  if (window.location.protocol == 'file:' ||
+      !window.location.hostname.replace(/localhost|\d{0,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/i, ''))
+  {
+    return true;
+  }
+  return false;
+}
 
 function setCookie(name, value, days)
 {
@@ -90,10 +99,14 @@ function eraseCookie(name)
   document.cookie = name + '=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
 }
 
-const startChat = async () => {
+async function startChat()
+{
   try
   {
     showChatRoom();
+    document.getElementById('self-view-parent').is_docked = true;
+
+    let mode = inTestingMode() ? "local" : "remote";
 
     if (mode == "local")
     {
@@ -122,7 +135,7 @@ const startChat = async () => {
 
     getMedia().then(() => {
       sendMessage({message_type : MESSAGE_TYPE.SERVER, content : 'join meeting'});
-      sendMessage({message_type : MESSAGE_TYPE.POSITION, content : {position : {x : 1, y : 0, z : 0}}});
+      // sendMessage({message_type : MESSAGE_TYPE.POSITION, content : {position : {x : 1, y : 0, z : 0}}});
     });
   }
   catch (err)
@@ -131,7 +144,8 @@ const startChat = async () => {
   }
 };
 
-const getMedia = async () => {
+async function getMedia()
+{
   try
   {
     // make sure camera/microphone permissions are resolved before anything
@@ -211,8 +225,10 @@ const getMedia = async () => {
   }
 };
 
-const endChat = async () => {
-  code = null;
+async function endChat()
+{
+  code                                           = null;
+  document.getElementById('self-view').srcObject = null;
 
   for (let key in peerConnection)
   {
@@ -221,8 +237,10 @@ const endChat = async () => {
   // peerConnection.close();
   peerConnection = {};
 
-  signaling.close(1000, 'Client ended the session.');
-  signaling = null;
+  for (let key in userDevices)
+  {
+    delete userDevices[key];
+  }
 
   senders.length = 0;
 
@@ -246,9 +264,13 @@ const endChat = async () => {
 
   file = null;
   showLandingPage();
+
+  signaling.close(1000, 'Client ended the session.');
+  signaling = null;
 };
 
-const createPeerConnection = () => {
+function createPeerConnection()
+{
   const pc = new RTCPeerConnection({
     iceServers : [ {urls : 'stun:stun.m.test.com:19000'} ],
   });
@@ -313,7 +335,8 @@ const createPeerConnection = () => {
   return pc;
 };
 
-const updateRemoteViewLayout = async () => {
+async function updateRemoteViewLayout()
+{
   let container = document.getElementById('remote-view-container');
 
   let desired_rows    = 1;
@@ -356,7 +379,8 @@ const updateRemoteViewLayout = async () => {
   }
 };
 
-const addMessageHandler = () => {
+function addMessageHandler()
+{
   signaling.onmessage = async (message) => {
     const data = JSON.parse(message.data);
 
@@ -431,8 +455,8 @@ const addMessageHandler = () => {
     }
   }
 };
-const waitForOpenConnection =
-    (socket) => {
+function waitForOpenConnection(socket)
+{
             return new Promise((resolve, reject) => {
                 const maxNumberOfAttempts = 10
             const intervalTime = 200 // ms
@@ -452,10 +476,10 @@ const waitForOpenConnection =
     currentAttempt++
                 }, intervalTime)
             })
-    }
+}
 
-const sendMessage =
-    async (message) => {
+async function sendMessage(message)
+{
   if (signaling.readyState !== signaling.OPEN)
   {
     try
@@ -486,8 +510,8 @@ const sendMessage =
   }
 }
 
-const createAndSendOffer =
-    async (pc) => {
+async function createAndSendOffer(pc)
+{
   const offer = await pc.createOffer();
   await pc.setLocalDescription(offer);
 
@@ -497,19 +521,20 @@ const createAndSendOffer =
   });
 }
 
-const showChatRoom =
-    () => {
-      document.getElementById('start').style.display     = 'none';
-      document.getElementById('chat-room').style.display = '';
-    }
+function showChatRoom()
+{
+  document.getElementById('start').style.display     = 'none';
+  document.getElementById('chat-room').style.display = '';
+}
 
-const showLandingPage =
-    () => {
-      document.getElementById('start').style.display     = '';
-      document.getElementById('chat-room').style.display = 'none';
-    }
+function showLandingPage()
+{
+  document.getElementById('start').style.display     = '';
+  document.getElementById('chat-room').style.display = 'none';
+}
 
-const shareFile = () => {
+function shareFile()
+{
   if (file)
   {
     const channelLabel = file.name;
@@ -532,13 +557,14 @@ const shareFile = () => {
   }
 };
 
-const closeDialog =
-    () => {
-      document.getElementById('select-file-input').value          = '';
-      document.getElementById('select-file-dialog').style.display = 'none';
-    }
+function closeDialog()
+{
+  document.getElementById('select-file-input').value          = '';
+  document.getElementById('select-file-dialog').style.display = 'none';
+}
 
-const downloadFile = (blob, fileName) => {
+function downloadFile(blob, fileName)
+{
   const a    = document.createElement('a');
   const url  = window.URL.createObjectURL(blob);
   a.href     = url;
@@ -562,15 +588,21 @@ document.getElementById('code-input').addEventListener('input', async (event) =>
   }
 });
 
-document.getElementById('start-button').addEventListener('click', async () => {
+document.getElementById('start-button').addEventListener('click', onStartButtonClick);
+
+async function onStartButtonClick()
+{
   if (code)
   {
     startChat();
     document.getElementById('code-input').value = null;
   }
-});
+}
 
-document.getElementById("code-input").addEventListener("keyup", event => {
+document.getElementById("code-input").addEventListener("keyup", onCodeInputKeyup);
+
+function onCodeInputKeyup(event)
+{
   if (event.key !== "Enter")
   {
     return;
@@ -578,7 +610,7 @@ document.getElementById("code-input").addEventListener("keyup", event => {
 
   document.getElementById("start-button").click();
   event.preventDefault(); // No need to `return false;`.
-});
+}
 
 document.getElementById('end-button').addEventListener('click', async () => {
   if (code)
@@ -685,11 +717,41 @@ document.getElementById('self-view').addEventListener("dblclick", () => {
   element.style.width    = '';
   element.style.top      = '';
   element.style.left     = '';
+
+  element.is_docked = true;
 }, false);
+
+let self_view_resize_observer = new ResizeObserver(handleResize).observe(document.getElementById('self-view-parent'));
+
+function handleResize(entries)
+{
+  for (let entry of entries)
+  {
+    resizeMinimapFromElement(entry)
+  }
+}
+
+function resizeMinimapFromElement(e)
+{
+  if (e.target === document.getElementById('self-view-parent'))
+  {
+    // if (!e.target.hasAttribute('is_docked') || e.target.is_docked == false)
+    if (e.target.is_docked == true)
+    {
+      let new_size = e.contentRect;
+      let room_map = document.getElementById('room-map');
+
+      room_map.style.width  = new_size.width + "px"
+      room_map.style.height = new_size.height + "px"
+    }
+  }
+};
 
 function moveSelfView(e)
 {
-  element                = document.getElementById('self-view-parent');
+  element           = document.getElementById('self-view-parent');
+  element.is_docked = false;
+
   original_size          = element.getBoundingClientRect();
   element.style.position = "absolute";
   element.style.width    = original_size.width + "px";
