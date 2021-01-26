@@ -55,6 +55,7 @@ let userVideoStream;
 let displayMediaStream;
 let file;
 let host_id;
+let self_view_resize_observer = new ResizeObserver(handleResize).observe(document.getElementById('self-view-parent'));
 
 let params = {
   "local" : {"protocol" : "ws"},
@@ -721,8 +722,6 @@ document.getElementById('self-view').addEventListener("dblclick", () => {
   element.is_docked = true;
 }, false);
 
-let self_view_resize_observer = new ResizeObserver(handleResize).observe(document.getElementById('self-view-parent'));
-
 function handleResize(entries)
 {
   for (let entry of entries)
@@ -735,7 +734,6 @@ function resizeMinimapFromElement(e)
 {
   if (e.target === document.getElementById('self-view-parent'))
   {
-    // if (!e.target.hasAttribute('is_docked') || e.target.is_docked == false)
     if (e.target.is_docked == true)
     {
       let new_size = e.contentRect;
