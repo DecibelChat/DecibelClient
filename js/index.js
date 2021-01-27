@@ -12,7 +12,7 @@ const MESSAGE_TYPE = {
 
 class Peer
 {
-  constructor(parent = document.getElementById('remote-view-container'))
+  constructor(parent = document.getElementById('chat-room'))
   {
     this.video          = document.createElement('video');
     this.video.id       = `remote-view-${Object.keys(peerConnection).length}`;
@@ -55,7 +55,7 @@ let userVideoStream;
 let displayMediaStream;
 let file;
 let host_id;
-let self_view_resize_observer = new ResizeObserver(handleResize).observe(document.getElementById('self-view-parent'));
+// let self_view_resize_observer = new ResizeObserver(handleResize).observe(document.getElementById('self-view-parent'));
 
 let params = {
   "local" : {"protocol" : "ws"},
@@ -338,7 +338,7 @@ function createPeerConnection()
 
 async function updateRemoteViewLayout()
 {
-  let container = document.getElementById('remote-view-container');
+  let container = document.getElementById('chat-room');
 
   let desired_rows    = 1;
   let desired_columns = 1;
@@ -722,28 +722,28 @@ document.getElementById('self-view').addEventListener("dblclick", () => {
   element.is_docked = true;
 }, false);
 
-function handleResize(entries)
-{
-  for (let entry of entries)
-  {
-    resizeMinimapFromElement(entry)
-  }
-}
+// function handleResize(entries)
+// {
+//   for (let entry of entries)
+//   {
+//     resizeMinimapFromElement(entry)
+//   }
+// }
 
-function resizeMinimapFromElement(e)
-{
-  if (e.target === document.getElementById('self-view-parent'))
-  {
-    if (e.target.is_docked == true)
-    {
-      let new_size = e.contentRect;
-      let room_map = document.getElementById('room-map');
+// function resizeMinimapFromElement(e)
+// {
+//   if (e.target === document.getElementById('self-view-parent'))
+//   {
+//     if (e.target.is_docked == true)
+//     {
+//       let new_size = e.contentRect;
+//       let room_map = document.getElementById('room-map');
 
-      room_map.style.width  = new_size.width + "px"
-      room_map.style.height = new_size.height + "px"
-    }
-  }
-};
+//       room_map.style.width  = new_size.width + "px"
+//       room_map.style.height = new_size.height + "px"
+//     }
+//   }
+// };
 
 function moveSelfView(e)
 {
